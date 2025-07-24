@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{381c55d9-d941-4e4b-997f-9c488a4d5aa3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\core">
+      <UniqueIdentifier>{9d1cf18f-96d4-4437-8332-09ca4222a6d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\models">
+      <UniqueIdentifier>{eb1872f0-c923-4ed5-bc73-b9bd1e4458d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gui">
+      <UniqueIdentifier>{687335df-def0-4dce-876c-8a83adf34d34}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utils">
+      <UniqueIdentifier>{77a8614b-54b9-47b0-94c4-c5749bf9e5aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs">
+      <UniqueIdentifier>{d2a14981-fcbb-4cbf-a368-456cb20d28e1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\core\collectors">
+      <UniqueIdentifier>{fae0a567-da84-4cd6-bf8d-7c6323354b2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\core\models">
+      <UniqueIdentifier>{a197cbeb-01c5-4899-9a1e-821a476c2c5d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="systeminfomonitor.cpp">
+      <Filter>gui</Filter>
+    </ClCompile>
+    <ClCompile Include="DataManager.cpp">
+      <Filter>src\core</Filter>
+    </ClCompile>
+    <ClCompile Include="ProcessCollector.cpp">
+      <Filter>src\core\collectors</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemInfoCollector.cpp">
+      <Filter>src\core\collectors</Filter>
+    </ClCompile>
+    <ClCompile Include="SessionCollector.cpp">
+      <Filter>src\core\collectors</Filter>
+    </ClCompile>
+    <ClCompile Include="ServiceCollector.cpp">
+      <Filter>src\core\collectors</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkCollector.cpp">
+      <Filter>src\core\collectors</Filter>
+    </ClCompile>
+    <ClCompile Include="processwidget.cpp">
+      <Filter>gui</Filter>
+    </ClCompile>
+    <ClCompile Include="systeminfowidget.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="systeminfomonitor.h">
+      <Filter>gui</Filter>
+    </QtMoc>
+    <QtMoc Include="processwidget.h">
+      <Filter>gui</Filter>
+    </QtMoc>
+    <QtMoc Include="systeminfowidget.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="systeminfomonitor.qrc">
+      <Filter>gui</Filter>
+    </QtRcc>
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="systeminfomonitor.ui">
+      <Filter>gui</Filter>
+    </QtUic>
+    <QtUic Include="processwidget.ui">
+      <Filter>gui</Filter>
+    </QtUic>
+    <QtUic Include="systeminfowidget.ui">
+      <Filter>gui</Filter>
+    </QtUic>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="DataManager.h">
+      <Filter>src\core</Filter>
+    </ClInclude>
+    <ClInclude Include="ProcessCollector.h">
+      <Filter>src\core\collectors</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemInfoCollector.h">
+      <Filter>src\core\collectors</Filter>
+    </ClInclude>
+    <ClInclude Include="SessionCollector.h">
+      <Filter>src\core\collectors</Filter>
+    </ClInclude>
+    <ClInclude Include="ServiceCollector.h">
+      <Filter>src\core\collectors</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkCollector.h">
+      <Filter>src\core\collectors</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Readme.md" />
+  </ItemGroup>
+</Project>
