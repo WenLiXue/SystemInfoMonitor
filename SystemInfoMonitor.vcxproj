@@ -97,9 +97,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="NetworkConnectionWidget.cpp" />
     <ClCompile Include="processwidget.cpp" />
+    <ClCompile Include="servicewidget.cpp" />
+    <ClCompile Include="sessionwidget.cpp" />
     <ClCompile Include="systeminfowidget.cpp" />
     <QtRcc Include="systeminfomonitor.qrc" />
+    <QtUic Include="networkconnectionwidget.ui" />
     <QtUic Include="systeminfomonitor.ui" />
     <QtMoc Include="systeminfomonitor.h" />
     <ClCompile Include="DataManager.cpp" />
@@ -116,9 +120,12 @@
   <ItemGroup>
     <ClInclude Include="DataManager.h" />
     <ClInclude Include="NetworkCollector.h" />
+    <QtMoc Include="NetworkConnectionWidget.h" />
     <ClInclude Include="ProcessCollector.h" />
     <ClInclude Include="ServiceCollector.h" />
+    <QtMoc Include="servicewidget.h" />
     <ClInclude Include="SessionCollector.h" />
+    <QtMoc Include="sessionwidget.h" />
     <ClInclude Include="SystemInfoCollector.h" />
     <QtMoc Include="systeminfowidget.h" />
     <QtMoc Include="processwidget.h" />

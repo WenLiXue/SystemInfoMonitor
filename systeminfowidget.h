@@ -1,9 +1,11 @@
-#ifndef SYSTEMINFOWIDGET_H
+ï»¿#ifndef SYSTEMINFOWIDGET_H
 #define SYSTEMINFOWIDGET_H
 
 #include <QWidget>
 #include <QGroupBox>
 #include <QLabel>
+#include <QProgressBar>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -18,43 +20,46 @@ class SystemInfoWidget : public QWidget {
 
 public:
     explicit SystemInfoWidget(QWidget* parent = nullptr);
-    ~SystemInfoWidget();
+    void startAutoRefresh();
+    void stopAutoRefresh();
+    ~SystemInfoWidget() override;
 
     void initUI();
 
-    // Ë¢ĞÂÏµÍ³ĞÅÏ¢
     void refreshSystemInfo();
+    void setAsCurrentTab(); // æ ‡ç­¾é¡µåˆ‡æ¢åˆ°å½“å‰é¡µæ—¶è°ƒç”¨
 
 private slots:
-    // Ë¢ĞÂ°´Å¥µã»÷ÊÂ¼ş
-    void onRefreshClicked();
+    void onRefreshClicked();  // æ‰‹åŠ¨åˆ·æ–°æŒ‰é’®
+    void onAutoRefresh();     // å®šæ—¶å™¨è‡ªåŠ¨åˆ·æ–°
+    void onTabVisibleChanged(bool visible); // æ ‡ç­¾é¡µæ˜¾ç¤º/éšè—çŠ¶æ€å˜åŒ–
 
 private:
     Ui::SystemInfoWidget* ui;
-
-    // Êı¾İ¹ÜÀíÆ÷£¨Í¨¹ıµ¥Àı·ÃÎÊ£©
     DataManager& m_dataManager;
 
-    // ===== ²Ù×÷ÏµÍ³ĞÅÏ¢×é =====
-    QGroupBox* m_osGroup;           // ²Ù×÷ÏµÍ³ĞÅÏ¢·Ö×é¿ò
-    QLabel* m_osVersionLabel;       // ²Ù×÷ÏµÍ³°æ±¾±êÇ©£¨Öµ£©
-    QLabel* m_hostNameLabel;        // Ö÷»úÃû±êÇ©£¨Öµ£©
-    QLabel* m_userNameLabel;        // ÓÃ»§Ãû±êÇ©£¨Öµ£©
-    QLabel* m_systemUpTimeLabel;    // ÏµÍ³ÔËĞĞÊ±¼ä±êÇ©£¨Öµ£©
+    // UIç»„ä»¶
+    QGroupBox* m_osGroup;
+    QLabel* m_osVersionLabel;
+    QLabel* m_hostNameLabel;
+    QLabel* m_userNameLabel;
+    QLabel* m_systemUpTimeLabel;
 
-    // ===== Ó²¼şĞÅÏ¢×é =====
-    QGroupBox* m_hardwareGroup;     // Ó²¼şĞÅÏ¢·Ö×é¿ò
-    QLabel* m_cpuInfoLabel;         // CPUĞÅÏ¢±êÇ©£¨Öµ£©
-    QLabel* m_cpuCoresLabel;        // CPUºËĞÄÊı±êÇ©£¨Öµ£©
+    QGroupBox* m_hardwareGroup;
+    QLabel* m_cpuInfoLabel;
+    QLabel* m_cpuCoresLabel;
+    QLabel* m_cpuUsageLabel;
+    QProgressBar* m_cpuUsageBar;
 
-    // ===== ÄÚ´æĞÅÏ¢×é =====
-    QGroupBox* m_memoryGroup;       // ÄÚ´æĞÅÏ¢·Ö×é¿ò
-    QLabel* m_totalMemoryLabel;     // ×ÜÎïÀíÄÚ´æ±êÇ©£¨Öµ£©
-    QLabel* m_availableMemoryLabel; // ¿ÉÓÃÎïÀíÄÚ´æ±êÇ©£¨Öµ£©
-    QLabel* m_memoryUsageLabel;     // ÄÚ´æÊ¹ÓÃÂÊ±êÇ©£¨Öµ£©
+    QGroupBox* m_memoryGroup;
+    QLabel* m_totalMemoryLabel;
+    QLabel* m_availableMemoryLabel;
+    QLabel* m_memoryUsageLabel;
+    QProgressBar* m_memoryUsageBar;
 
-    // Ë¢ĞÂ°´Å¥
     QPushButton* m_refreshBtn;
+    QTimer* m_autoRefreshTimer; // è‡ªåŠ¨åˆ·æ–°å®šæ—¶å™¨
+    bool m_firstLoad;           // æ˜¯å¦é¦–æ¬¡åŠ è½½
 };
 
 #endif // SYSTEMINFOWIDGET_H

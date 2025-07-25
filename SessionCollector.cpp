@@ -1,9 +1,9 @@
-// SessionCollector.cpp
+ï»¿// SessionCollector.cpp
 #include "SessionCollector.h"
 #include <iostream>
 
-// ¸¨Öúº¯Êı£º½«FILETIME×ª»»Îª×Ö·û´®
-std::wstring FileTimeToString(const FILETIME& ft) {
+// è¾…åŠ©å‡½æ•°ï¼šå°†FILETIMEè½¬æ¢ä¸ºå­—ç¬¦ä¸²
+inline std::wstring FileTimeToString(const FILETIME& ft) {
     SYSTEMTIME st;
     FileTimeToSystemTime(&ft, &st);
 
@@ -22,7 +22,7 @@ SessionCollector::~SessionCollector() {
 }
 
 bool SessionCollector::Initialize() {
-    // ÎŞĞèÌØÊâ³õÊ¼»¯
+    // æ— éœ€ç‰¹æ®Šåˆå§‹åŒ–
     m_initialized = true;
     return true;
 }
@@ -38,7 +38,7 @@ bool SessionCollector::CollectSessions(std::vector<SessionInfo>& sessions) {
 
     sessions.clear();
 
-    // Ã¶¾Ù»á»°
+    // æšä¸¾ä¼šè¯
     DWORD sessionCount = 0;
     PWTS_SESSION_INFOW sessionInfo = NULL;
 
@@ -46,21 +46,21 @@ bool SessionCollector::CollectSessions(std::vector<SessionInfo>& sessions) {
         return false;
     }
 
-    // ´¦ÀíÃ¿¸ö»á»°
+    // å¤„ç†æ¯ä¸ªä¼šè¯
     for (DWORD i = 0; i < sessionCount; ++i) {
         SessionInfo info;
         info.sessionId = sessionInfo[i].SessionId;
         info.state = sessionInfo[i].State;
 
-        // »ñÈ¡ÓÃ»§Ãû
+        // è·å–ç”¨æˆ·å
         LPWSTR userName = NULL;
-        DWORD userNameSize = 0; // ĞÂÔö±äÁ¿ÓÃÓÚ´æ´¢Êı¾İ´óĞ¡
+        DWORD userNameSize = 0; // æ–°å¢å˜é‡ç”¨äºå­˜å‚¨æ•°æ®å¤§å°
         if (WTSQuerySessionInformationW(
             WTS_CURRENT_SERVER_HANDLE,
             info.sessionId,
             WTSUserName,
             &userName,
-            &userNameSize // ´«µİ±äÁ¿µØÖ·¶ø·ÇNULL
+            &userNameSize // ä¼ é€’å˜é‡åœ°å€è€ŒéNULL
         )) {
             info.userName = userName ? userName : L"unknown";
             if (userName) WTSFreeMemory(userName);
@@ -69,15 +69,15 @@ bool SessionCollector::CollectSessions(std::vector<SessionInfo>& sessions) {
             info.userName = L"unknown";
         }
 
-        // »ñÈ¡ÓòÃû
+        // è·å–åŸŸå
         LPWSTR domainName = NULL;
-        DWORD domainNameSize = 0; // ĞÂÔö±äÁ¿ÓÃÓÚ´æ´¢Êı¾İ´óĞ¡
+        DWORD domainNameSize = 0; // æ–°å¢å˜é‡ç”¨äºå­˜å‚¨æ•°æ®å¤§å°
         if (WTSQuerySessionInformationW(
             WTS_CURRENT_SERVER_HANDLE,
             info.sessionId,
             WTSDomainName,
             &domainName,
-            &domainNameSize // ´«µİ±äÁ¿µØÖ·¶ø·ÇNULL
+            &domainNameSize // ä¼ é€’å˜é‡åœ°å€è€ŒéNULL
         )) {
             info.domain = domainName ? domainName : L"unknown";
             if (domainName) WTSFreeMemory(domainName);
@@ -86,19 +86,19 @@ bool SessionCollector::CollectSessions(std::vector<SessionInfo>& sessions) {
             info.domain = L"unknown";
         }
 
-        // »ñÈ¡µÇÂ¼Ê±¼ä (¼æÈİ¾ÉSDK°æ±¾)
+        // è·å–ç™»å½•æ—¶é—´ (å…¼å®¹æ—§SDKç‰ˆæœ¬)
         FILETIME loginTime = { 0 };
         info.loginTime = L"unknown";
 
-        // ³¢ÊÔÊ¹ÓÃWTSQuerySessionInformation»ñÈ¡µÇÂ¼Ê±¼ä
+        // å°è¯•ä½¿ç”¨WTSQuerySessionInformationè·å–ç™»å½•æ—¶é—´
         DWORD timeType = 0;
         LPWSTR timeStr = NULL;
         if (WTSQuerySessionInformationW(
             WTS_CURRENT_SERVER_HANDLE,
             info.sessionId,
-            (WTS_INFO_CLASS)14, // ¶ÔÓ¦WTSConnectTimeµÄÖµ(Èç¹ûSDKÖĞÎ´¶¨Òå)
+            (WTS_INFO_CLASS)14, // å¯¹åº”WTSConnectTimeçš„å€¼(å¦‚æœSDKä¸­æœªå®šä¹‰)
             &timeStr,
-            &timeType // ÕâÀïÒÑ¾­ÕıÈ·´«µİÁË±äÁ¿µØÖ·
+            &timeType // è¿™é‡Œå·²ç»æ­£ç¡®ä¼ é€’äº†å˜é‡åœ°å€
         )) {
             if (timeType == sizeof(FILETIME)) {
                 FILETIME* pTime = reinterpret_cast<FILETIME*>(timeStr);
@@ -110,7 +110,7 @@ bool SessionCollector::CollectSessions(std::vector<SessionInfo>& sessions) {
         sessions.push_back(info);
     }
 
-    // ÊÍ·Å»á»°ĞÅÏ¢ÄÚ´æ
+    // é‡Šæ”¾ä¼šè¯ä¿¡æ¯å†…å­˜
     if (sessionInfo) {
         WTSFreeMemory(sessionInfo);
     }

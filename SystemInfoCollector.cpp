@@ -1,6 +1,6 @@
-// SystemInfoCollector.cpp
+ï»¿// SystemInfoCollector.cpp
 #include "SystemInfoCollector.h"
-#include <lmcons.h> // °üº¬UNLENºÍÏà¹Ø³£Á¿¶¨Òå
+#include <lmcons.h> // åŒ…å«UNLENå’Œç›¸å…³å¸¸é‡å®šä¹‰
 #include <windows.h>
 #include <psapi.h>
 #include <iostream>
@@ -11,15 +11,15 @@
 
 #pragma comment(lib, "psapi.lib")
 
-// ¸¨Öúº¯Êı£º»ñÈ¡CPUĞÅÏ¢
+// è¾…åŠ©å‡½æ•°ï¼šè·å–CPUä¿¡æ¯
 std::wstring GetCpuInfo() {
-    std::wstring cpuInfo = L"Î´Öª";
+    std::wstring cpuInfo = L"æœªçŸ¥";
 
-    // »ñÈ¡CPUĞÅÏ¢
+    // è·å–CPUä¿¡æ¯
     SYSTEM_INFO systemInfo;
     GetSystemInfo(&systemInfo);
 
-    // »ñÈ¡CPUÃû³Æ
+    // è·å–CPUåç§°
     HKEY hKey;
     if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
         WCHAR cpuName[512] = { 0 };
@@ -33,7 +33,7 @@ std::wstring GetCpuInfo() {
     return cpuInfo;
 }
 
-// ¸¨Öúº¯Êı£º»ñÈ¡ÏµÍ³Æô¶¯Ê±¼ä
+// è¾…åŠ©å‡½æ•°ï¼šè·å–ç³»ç»Ÿå¯åŠ¨æ—¶é—´
 std::wstring GetSystemUpTime() {
     FILETIME ftNow, ftSystemStart;
     GetSystemTimeAsFileTime(&ftNow);
@@ -42,14 +42,14 @@ std::wstring GetSystemUpTime() {
     uiNow.LowPart = ftNow.dwLowDateTime;
     uiNow.HighPart = ftNow.dwHighDateTime;
 
-    // »ñÈ¡ÏµÍ³Æô¶¯Ê±¼ä
+    // è·å–ç³»ç»Ÿå¯åŠ¨æ—¶é—´
     DWORD upTime = GetTickCount();
-    ULONGLONG systemStartTime = uiNow.QuadPart - (upTime * 10000); // ×ª»»Îª100ÄÉÃëÎªµ¥Î»
+    ULONGLONG systemStartTime = uiNow.QuadPart - (upTime * 10000); // è½¬æ¢ä¸º100çº³ç§’ä¸ºå•ä½
 
     ftSystemStart.dwLowDateTime = systemStartTime & 0xFFFFFFFF;
     ftSystemStart.dwHighDateTime = systemStartTime >> 32;
 
-    // ×ª»»Îª±¾µØÊ±¼ä
+    // è½¬æ¢ä¸ºæœ¬åœ°æ—¶é—´
     SYSTEMTIME stLocal;
     FileTimeToLocalFileTime(&ftSystemStart, &ftSystemStart);
     FileTimeToSystemTime(&ftSystemStart, &stLocal);
@@ -67,51 +67,69 @@ SystemInfoCollector::SystemInfoCollector() {}
 SystemInfoCollector::~SystemInfoCollector() {}
 
 bool SystemInfoCollector::Initialize() {
-    // ÎŞĞèÌØÊâ³õÊ¼»¯
+    // æ— éœ€ç‰¹æ®Šåˆå§‹åŒ–
     return true;
 }
 
 void SystemInfoCollector::Cleanup() {
-    // ÎŞĞèÌØÊâÇåÀí
+    // æ— éœ€ç‰¹æ®Šæ¸…ç†
+}
+
+#include <windows.h>
+#include <processthreadsapi.h>
+#include <psapi.h>
+#include <iostream>
+#include <memory>
+#include "systeminfocollector.h"  // åŒ…å«SystemInfoç»“æ„ä½“å®šä¹‰
+
+// è¾…åŠ©å‡½æ•°ï¼šå°†FILETIMEè½¬æ¢ä¸ºå¯è¯»çš„æ—¶é—´å­—ç¬¦ä¸²ï¼ˆå¯é€‰ï¼Œç”¨äºè°ƒè¯•ï¼‰
+inline std::wstring FileTimeToString(const FILETIME& ft) {
+    SYSTEMTIME st;
+    FileTimeToSystemTime(&ft, &st);
+    return std::wstring(
+        L"[" + std::to_wstring(st.wYear) + L"-" +
+        std::to_wstring(st.wMonth) + L"-" +
+        std::to_wstring(st.wDay) + L" " +
+        std::to_wstring(st.wHour) + L":" +
+        std::to_wstring(st.wMinute) + L":" +
+        std::to_wstring(st.wSecond) + L"]"
+    );
 }
 
 std::unique_ptr<SystemInfo> SystemInfoCollector::CollectSystemInfo() {
     auto systemInfo = std::make_unique<SystemInfo>();
 
-    // »ñÈ¡²Ù×÷ÏµÍ³°æ±¾£¨Ìæ´ú GetVersionExW£©
+    // è·å–æ“ä½œç³»ç»Ÿç‰ˆæœ¬
     systemInfo->osVersion = GetOsVersionString();
 
-    // »ñÈ¡Ö÷»úÃû
+    // è·å–ä¸»æœºå
     wchar_t hostName[MAX_COMPUTERNAME_LENGTH + 1] = { 0 };
     DWORD hostNameSize = MAX_COMPUTERNAME_LENGTH + 1;
-
     if (!GetComputerNameW(hostName, &hostNameSize)) {
-        systemInfo->hostName = L"Î´ÖªÖ÷»ú";
+        systemInfo->hostName = L"æœªçŸ¥ä¸»æœº";
         std::wcerr << L"GetComputerNameW failed with error: " << GetLastError() << std::endl;
     }
     else {
         systemInfo->hostName = hostName;
     }
 
-    // »ñÈ¡µ±Ç°ÓÃ»§Ãû
+    // è·å–å½“å‰ç”¨æˆ·å
     wchar_t userName[UNLEN + 1] = { 0 };
     DWORD userNameSize = UNLEN + 1;
-
     if (!GetUserNameW(userName, &userNameSize)) {
-        systemInfo->userName = L"Î´ÖªÓÃ»§";
+        systemInfo->userName = L"æœªçŸ¥ç”¨æˆ·";
         std::wcerr << L"GetUserNameW failed with error: " << GetLastError() << std::endl;
     }
     else {
         systemInfo->userName = userName;
     }
 
-    // »ñÈ¡ÏµÍ³Æô¶¯Ê±¼ä
+    // è·å–ç³»ç»Ÿå¯åŠ¨æ—¶é—´
     systemInfo->systemUpTime = GetSystemUpTime();
 
-    // »ñÈ¡ÄÚ´æĞÅÏ¢
+    // è·å–å†…å­˜ä¿¡æ¯
     MEMORYSTATUSEX memInfo = { 0 };
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
-
     if (!GlobalMemoryStatusEx(&memInfo)) {
         systemInfo->totalPhysicalMemory = 0;
         systemInfo->availablePhysicalMemory = 0;
@@ -122,24 +140,43 @@ std::unique_ptr<SystemInfo> SystemInfoCollector::CollectSystemInfo() {
         systemInfo->availablePhysicalMemory = memInfo.ullAvailPhys;
     }
 
-    // »ñÈ¡CPUĞÅÏ¢
+    // è·å–CPUä¿¡æ¯ï¼ˆæ ¸å¿ƒæ•°å’Œå‹å·ï¼‰
     SYSTEM_INFO sysInfo;
     GetSystemInfo(&sysInfo);
     systemInfo->cpuCores = sysInfo.dwNumberOfProcessors;
-    systemInfo->cpuInfo = GetCpuInfo();
+    systemInfo->cpuInfo = GetCpuInfo();  // å‡è®¾å·²æœ‰æ­¤å‡½æ•°è·å–CPUå‹å·
+
+    // ===================== æ–°å¢ï¼šCPUæ—¶é—´ç»Ÿè®¡ =====================
+    // é€šè¿‡GetSystemTimesè·å–ç³»ç»Ÿçº§CPUæ—¶é—´ï¼ˆè‡ªç³»ç»Ÿå¯åŠ¨ä»¥æ¥çš„ç´¯è®¡æ—¶é—´ï¼‰
+    FILETIME idleTime, kernelTime, userTime;
+    if (!GetSystemTimes(&idleTime, &kernelTime, &userTime)) {
+        std::wcerr << L"GetSystemTimes failed with error: " << GetLastError() << std::endl;
+        // åˆå§‹åŒ–ç©ºå€¼ï¼Œé¿å…æœªå®šä¹‰è¡Œä¸º
+        ZeroMemory(&systemInfo->idleTime, sizeof(FILETIME));
+        ZeroMemory(&systemInfo->kernelTime, sizeof(FILETIME));
+        ZeroMemory(&systemInfo->userTime, sizeof(FILETIME));
+    }
+    else {
+        // å­˜å‚¨CPUæ—¶é—´åˆ°SystemInfoç»“æ„ä½“
+        systemInfo->idleTime = idleTime;       // ç³»ç»Ÿç©ºé—²æ—¶é—´ï¼ˆæ‰€æœ‰CPUæ ¸å¿ƒçš„æ€»ç©ºé—²æ—¶é—´ï¼‰
+        systemInfo->kernelTime = kernelTime;   // å†…æ ¸æ¨¡å¼æ—¶é—´ï¼ˆç³»ç»Ÿ+é©±åŠ¨ç¨‹åºä½¿ç”¨çš„CPUæ—¶é—´ï¼‰
+        systemInfo->userTime = userTime;       // ç”¨æˆ·æ¨¡å¼æ—¶é—´ï¼ˆåº”ç”¨ç¨‹åºä½¿ç”¨çš„CPUæ—¶é—´ï¼‰
+
+    }
+    // ============================================================
 
     return systemInfo;
 }
 
-// Ìæ´ú GetVersionExW µÄº¯Êı
+// æ›¿ä»£ GetVersionExW çš„å‡½æ•°
 std::wstring SystemInfoCollector::GetOsVersionString() {
-    // Ê¹ÓÃ RtlGetVersion (NT ÄÚ²¿º¯Êı)
+    // ä½¿ç”¨ RtlGetVersion (NT å†…éƒ¨å‡½æ•°)
     typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
 
-    // ¶¯Ì¬¼ÓÔØ ntdll.dll ÖĞµÄ RtlGetVersion º¯Êı
+    // åŠ¨æ€åŠ è½½ ntdll.dll ä¸­çš„ RtlGetVersion å‡½æ•°
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     if (!hNtdll) {
-        return L"ÎŞ·¨»ñÈ¡²Ù×÷ÏµÍ³ĞÅÏ¢";
+        return L"æ— æ³•è·å–æ“ä½œç³»ç»Ÿä¿¡æ¯";
     }
 
     RtlGetVersionPtr pRtlGetVersion = reinterpret_cast<RtlGetVersionPtr>(
@@ -147,25 +184,25 @@ std::wstring SystemInfoCollector::GetOsVersionString() {
         );
 
     if (!pRtlGetVersion) {
-        return L"ÎŞ·¨»ñÈ¡²Ù×÷ÏµÍ³ĞÅÏ¢";
+        return L"æ— æ³•è·å–æ“ä½œç³»ç»Ÿä¿¡æ¯";
     }
 
     RTL_OSVERSIONINFOW osInfo = { 0 };
     osInfo.dwOSVersionInfoSize = sizeof(osInfo);
 
-    // µ÷ÓÃ RtlGetVersion »ñÈ¡ÏµÍ³°æ±¾
+    // è°ƒç”¨ RtlGetVersion è·å–ç³»ç»Ÿç‰ˆæœ¬
     NTSTATUS status = pRtlGetVersion(&osInfo);
     if (!NT_SUCCESS(status)) {
-        return L"ÎŞ·¨»ñÈ¡²Ù×÷ÏµÍ³ĞÅÏ¢";
+        return L"æ— æ³•è·å–æ“ä½œç³»ç»Ÿä¿¡æ¯";
     }
 
-    // ¸ù¾İ°æ±¾ºÅ¹¹½¨ÓÑºÃµÄ²Ù×÷ÏµÍ³Ãû³Æ
+    // æ ¹æ®ç‰ˆæœ¬å·æ„å»ºå‹å¥½çš„æ“ä½œç³»ç»Ÿåç§°
     std::wostringstream osVersion;
 
-    // ÅĞ¶Ï Windows °æ±¾
+    // åˆ¤æ–­ Windows ç‰ˆæœ¬
     if (osInfo.dwMajorVersion == 10) {
-        // ¼ì²éÊÇ·ñÊÇ Windows 11 (Í¨¹ı°æ±¾ºÅ»òÆäËûÌØÕ÷ÅĞ¶Ï)
-        // ×¢Òâ: Windows 11 ÈÔÊ¹ÓÃ major version 10£¬µ« build number >= 22000
+        // æ£€æŸ¥æ˜¯å¦æ˜¯ Windows 11 (é€šè¿‡ç‰ˆæœ¬å·æˆ–å…¶ä»–ç‰¹å¾åˆ¤æ–­)
+        // æ³¨æ„: Windows 11 ä»ä½¿ç”¨ major version 10ï¼Œä½† build number >= 22000
         if (osInfo.dwBuildNumber >= 22000) {
             osVersion << L"Windows 11";
         }
@@ -193,7 +230,7 @@ std::wstring SystemInfoCollector::GetOsVersionString() {
         osVersion << L"Windows NT " << osInfo.dwMajorVersion << L"." << osInfo.dwMinorVersion;
     }
 
-    // Ìí¼Ó°æ±¾ºÅĞÅÏ¢
+    // æ·»åŠ ç‰ˆæœ¬å·ä¿¡æ¯
     osVersion << L" (Build " << osInfo.dwBuildNumber << L")";
 
     return osVersion.str();

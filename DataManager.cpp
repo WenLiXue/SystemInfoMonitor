@@ -1,30 +1,17 @@
-// DataManager.cpp
+ï»¿// DataManager.cpp
 
 #include "DataManager.h"
 
 bool DataManager::InitGlobalInstance() {
     return GetInstance().Initialize();
 }
-// µ¥ÀıÄ£Ê½ÊµÏÖ
+// å•ä¾‹æ¨¡å¼å®ç°
 DataManager& DataManager::GetInstance() {
     static DataManager instance;
     return instance;
 }
 
-// ¹¹Ôìº¯Êı
-DataManager::DataManager()
-    : m_refreshInterval(5),
-    m_autoRefreshRunning(false),
-    m_refreshThread(nullptr) {
-    // ´´½¨ÊÕ¼¯Æ÷ÊµÀı
-    m_processCollector = std::make_unique<ProcessCollector>();
-    m_serviceCollector = std::make_unique<ServiceCollector>();
-    m_networkCollector = std::make_unique<NetworkCollector>();
-    m_sessionCollector = std::make_unique<SessionCollector>();
-    m_systemInfoCollector = std::make_unique<SystemInfoCollector>();
-}
-
-// Îö¹¹º¯Êı
+// ææ„å‡½æ•°
 DataManager::~DataManager() {
     StopAutoRefresh();
     Cleanup();
@@ -33,53 +20,78 @@ DataManager::~DataManager() {
     }
 }
 
-// ³õÊ¼»¯ËùÓĞÊÕ¼¯Æ÷
-bool DataManager::Initialize() {
-    bool result = true;
+// æ„é€ å‡½æ•° - åªè´Ÿè´£åˆ›å»ºå¯¹è±¡ï¼Œä¸æ‰§è¡Œè€—æ—¶æˆ–å¯èƒ½å¤±è´¥çš„æ“ä½œ
+DataManager::DataManager()
+    : m_refreshInterval(5),
+    m_autoRefreshRunning(false),
+    m_refreshThread(nullptr),
+    m_initialized(false) {
 
-    // ³õÊ¼»¯½ø³ÌÊÕ¼¯Æ÷
+    // åˆ›å»ºæ”¶é›†å™¨å®ä¾‹
+    m_processCollector = std::make_unique<ProcessCollector>();
+    m_serviceCollector = std::make_unique<ServiceCollector>();
+    m_networkCollector = std::make_unique<NetworkCollector>();
+    m_sessionCollector = std::make_unique<SessionCollector>();
+    m_systemInfoCollector = std::make_unique<SystemInfoCollector>();
+}
+
+// åˆå§‹åŒ–æ‰€æœ‰æ”¶é›†å™¨ - çº¿ç¨‹å®‰å…¨ç‰ˆæœ¬
+bool DataManager::Initialize() {
+    // ä½¿ç”¨äº’æ–¥é”ä¿è¯çº¿ç¨‹å®‰å…¨
+    std::lock_guard<std::mutex> lock(m_initMutex);
+
+    // å¦‚æœå·²ç»åˆå§‹åŒ–è¿‡ï¼Œç›´æ¥è¿”å›æˆåŠŸ
+    if (m_initialized) return true;
+
+    // æŒ‰é¡ºåºåˆå§‹åŒ–å„ä¸ªæ”¶é›†å™¨ï¼Œä»»ä½•ä¸€ä¸ªå¤±è´¥åˆ™ç»ˆæ­¢å¹¶è¿”å›é”™è¯¯
     if (!m_processCollector->Initialize()) {
         std::cerr << "Failed to initialize process collector!" << std::endl;
-        result = false;
+        Cleanup(); // æ¸…ç†å·²åˆå§‹åŒ–çš„èµ„æº
+        return false;
     }
 
-    // ³õÊ¼»¯·şÎñÊÕ¼¯Æ÷
     if (!m_serviceCollector->Initialize()) {
         std::cerr << "Failed to initialize service collector!" << std::endl;
-        result = false;
+        Cleanup();
+        return false;
     }
 
-     // ³õÊ¼»¯ÍøÂçÊÕ¼¯Æ÷
     if (!m_networkCollector->Initialize()) {
         std::cerr << "Failed to initialize network collector!" << std::endl;
-        result = false;
+        Cleanup();
+        return false;
     }
 
-    // ³õÊ¼»¯»á»°ÊÕ¼¯Æ÷
     if (!m_sessionCollector->Initialize()) {
         std::cerr << "Failed to initialize session collector!" << std::endl;
-        result = false;
+        Cleanup();
+        return false;
     }
 
-    // ³õÊ¼»¯ÏµÍ³ĞÅÏ¢ÊÕ¼¯Æ÷
     if (!m_systemInfoCollector->Initialize()) {
         std::cerr << "Failed to initialize system info collector!" << std::endl;
-        result = false;
+        Cleanup();
+        return false;
     }
 
-    return result;
+    // æ‰€æœ‰æ”¶é›†å™¨éƒ½åˆå§‹åŒ–æˆåŠŸ
+    m_initialized = true;
+    return true;
 }
 
-// ÇåÀí×ÊÔ´
+// æ¸…ç†èµ„æº
 void DataManager::Cleanup() {
-    m_processCollector->Cleanup();
-    m_serviceCollector->Cleanup();
-    m_networkCollector->Cleanup();
-    m_sessionCollector->Cleanup();
-    m_systemInfoCollector->Cleanup();
+    // æŒ‰ç›¸åé¡ºåºé‡Šæ”¾èµ„æº
+    if (m_systemInfoCollector) m_systemInfoCollector->Cleanup();
+    if (m_sessionCollector) m_sessionCollector->Cleanup();
+    if (m_networkCollector) m_networkCollector->Cleanup();
+    if (m_serviceCollector) m_serviceCollector->Cleanup();
+    if (m_processCollector) m_processCollector->Cleanup();
+    // é‡ç½®åˆå§‹åŒ–çŠ¶æ€
+    m_initialized = false;
 }
 
-// ÊÕ¼¯½ø³ÌĞÅÏ¢
+// æ”¶é›†è¿›ç¨‹ä¿¡æ¯
 bool DataManager::CollectProcesses() {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
@@ -93,7 +105,7 @@ bool DataManager::CollectProcesses() {
     return true;
 }
 
-// ÊÕ¼¯·şÎñĞÅÏ¢
+// æ”¶é›†æœåŠ¡ä¿¡æ¯
 bool DataManager::CollectServices() {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
@@ -107,7 +119,7 @@ bool DataManager::CollectServices() {
     return true;
 }
 
-// ÊÕ¼¯ÍøÂçÁ¬½ÓĞÅÏ¢
+// æ”¶é›†ç½‘ç»œè¿æ¥ä¿¡æ¯
 bool DataManager::CollectConnections() {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
@@ -121,7 +133,7 @@ bool DataManager::CollectConnections() {
     return true;
 }
 
-// ÊÕ¼¯»á»°ĞÅÏ¢
+// æ”¶é›†ä¼šè¯ä¿¡æ¯
 bool DataManager::CollectSessions() {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
@@ -135,7 +147,7 @@ bool DataManager::CollectSessions() {
     return true;
 }
 
-// ÊÕ¼¯ÏµÍ³ĞÅÏ¢
+// æ”¶é›†ç³»ç»Ÿä¿¡æ¯
 bool DataManager::CollectSystemInfo() {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
@@ -149,31 +161,31 @@ bool DataManager::CollectSystemInfo() {
     return true;
 }
 
-// »ñÈ¡½ø³ÌĞÅÏ¢
+// è·å–è¿›ç¨‹ä¿¡æ¯
 const std::vector<ProcessInfo>& DataManager::GetProcesses() const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
     return m_processes;
 }
 
-// »ñÈ¡·şÎñĞÅÏ¢
+// è·å–æœåŠ¡ä¿¡æ¯
 const std::vector<ServiceInfo>& DataManager::GetServices() const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
     return m_services;
 }
 
-// »ñÈ¡ÍøÂçÁ¬½ÓĞÅÏ¢
+// è·å–ç½‘ç»œè¿æ¥ä¿¡æ¯
 const std::vector<ConnectionInfo>& DataManager::GetConnections() const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
     return m_connections;
 }
 
-// »ñÈ¡»á»°ĞÅÏ¢
+// è·å–ä¼šè¯ä¿¡æ¯
 const std::vector<SessionInfo>& DataManager::GetSessions() const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
     return m_sessions;
 }
 
-// »ñÈ¡ÏµÍ³ĞÅÏ¢
+// è·å–ç³»ç»Ÿä¿¡æ¯
 const SystemInfo& DataManager::GetSystemInfo() const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
     if (!m_systemInfo) {
@@ -181,6 +193,65 @@ const SystemInfo& DataManager::GetSystemInfo() const {
         return emptyInfo;
     }
     return *m_systemInfo;
+}
+
+// è¾…åŠ©å‡½æ•°ï¼šå°†FILETIMEè½¬æ¢ä¸º64ä½æ•´æ•°ï¼ˆå•ä½ï¼š100çº³ç§’ï¼‰
+ULONGLONG FileTimeToUInt64(const FILETIME& ft) {
+    ULARGE_INTEGER ul;
+    ul.LowPart = ft.dwLowDateTime;
+    ul.HighPart = ft.dwHighDateTime;
+    return ul.QuadPart;
+}
+
+// è®¡ç®—CPUä½¿ç”¨ç‡
+const double DataManager::GetCpuUsage() const {
+    std::lock_guard<std::mutex> lock(m_dataMutex); // ç¡®ä¿çº¿ç¨‹å®‰å…¨
+
+    // æ£€æŸ¥ç³»ç»Ÿä¿¡æ¯æ˜¯å¦æœ‰æ•ˆ
+    if (!m_systemInfo) {
+        return 0.0;
+    }
+
+    const SystemInfo& currentInfo = *m_systemInfo;
+
+    // é¦–æ¬¡è°ƒç”¨æ—¶ï¼Œä»…è®°å½•å½“å‰CPUæ—¶é—´ï¼Œä¸è®¡ç®—ä½¿ç”¨ç‡
+    static FILETIME s_lastIdleTime = { 0 };
+    static FILETIME s_lastKernelTime = { 0 };
+    static FILETIME s_lastUserTime = { 0 };
+    static bool s_isFirstCall = true;
+
+    if (s_isFirstCall) {
+        // è®°å½•é¦–æ¬¡é‡‡é›†çš„æ—¶é—´
+        s_lastIdleTime = currentInfo.idleTime;
+        s_lastKernelTime = currentInfo.kernelTime;
+        s_lastUserTime = currentInfo.userTime;
+        s_isFirstCall = false;
+        return 0.0; // é¦–æ¬¡è°ƒç”¨æ— æ³•è®¡ç®—ï¼Œè¿”å›0
+    }
+
+    // è®¡ç®—ä¸¤æ¬¡é‡‡é›†çš„æ—¶é—´å·®å€¼ï¼ˆå•ä½ï¼š100çº³ç§’ï¼‰
+    ULONGLONG idleDiff = FileTimeToUInt64(currentInfo.idleTime) - FileTimeToUInt64(s_lastIdleTime);
+    ULONGLONG kernelDiff = FileTimeToUInt64(currentInfo.kernelTime) - FileTimeToUInt64(s_lastKernelTime);
+    ULONGLONG userDiff = FileTimeToUInt64(currentInfo.userTime) - FileTimeToUInt64(s_lastUserTime);
+
+    // æ›´æ–°ä¸Šæ¬¡é‡‡é›†çš„æ—¶é—´ï¼ˆç”¨äºä¸‹æ¬¡è®¡ç®—ï¼‰
+    s_lastIdleTime = currentInfo.idleTime;
+    s_lastKernelTime = currentInfo.kernelTime;
+    s_lastUserTime = currentInfo.userTime;
+
+    // æ€»CPUæ—¶é—´ = å†…æ ¸æ—¶é—´å·® + ç”¨æˆ·æ—¶é—´å·®ï¼ˆç³»ç»Ÿæ€»æ¶ˆè€—çš„CPUæ—¶é—´ï¼‰
+    ULONGLONG totalDiff = kernelDiff + userDiff;
+
+    // é¿å…é™¤é›¶é”™è¯¯ï¼ˆæ—¶é—´å·®ä¸º0æ—¶è¿”å›0ï¼‰
+    if (totalDiff == 0) {
+        return 0.0;
+    }
+
+    // CPUä½¿ç”¨ç‡ = (1 - ç©ºé—²æ—¶é—´å·® / æ€»æ—¶é—´å·®) Ã— 100%
+    double usage = (1.0 - static_cast<double>(idleDiff) / totalDiff) * 100.0;
+
+    // ç¡®ä¿ä½¿ç”¨ç‡åœ¨0-100ä¹‹é—´ï¼ˆé¿å…æµ®ç‚¹è®¡ç®—è¯¯å·®ï¼‰
+    return max(0.0, min(100.0, usage));
 }
 
 bool DataManager::TerminateTargetProcessByPid(DWORD pid)
@@ -219,59 +290,59 @@ bool DataManager::StartTargetService(const std::wstring& serviceName) {
     return result != 0;
 }
 
-// Í£Ö¹·şÎñ
+// åœæ­¢æœåŠ¡
 bool DataManager::StopService(const std::wstring& serviceName) {
-    // ´ò¿ª·şÎñ¿ØÖÆ¹ÜÀíÆ÷Êı¾İ¿â£¬»ñÈ¡Æä¾ä±ú
+    // æ‰“å¼€æœåŠ¡æ§åˆ¶ç®¡ç†å™¨æ•°æ®åº“ï¼Œè·å–å…¶å¥æŸ„
     SC_HANDLE schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
     if (schSCManager == NULL) {
-        // Èô´ò¿ªÊ§°Ü£¬Êä³ö´íÎóĞÅÏ¢²¢·µ»Ø false
+        // è‹¥æ‰“å¼€å¤±è´¥ï¼Œè¾“å‡ºé”™è¯¯ä¿¡æ¯å¹¶è¿”å› false
         std::cerr << "OpenSCManager failed!" << std::endl;
         return false;
     }
 
-    // ´ò¿ªÖ¸¶¨Ãû³ÆµÄ·şÎñ£¬»ñÈ¡Æä¾ä±ú
+    // æ‰“å¼€æŒ‡å®šåç§°çš„æœåŠ¡ï¼Œè·å–å…¶å¥æŸ„
     SC_HANDLE schService = OpenService(schSCManager, serviceName.c_str(), SERVICE_ALL_ACCESS);
     if (schService == NULL) {
-        // Èô´ò¿ªÊ§°Ü£¬Êä³ö´íÎóĞÅÏ¢£¬¹Ø±Õ·şÎñ¿ØÖÆ¹ÜÀíÆ÷¾ä±ú²¢·µ»Ø false
+        // è‹¥æ‰“å¼€å¤±è´¥ï¼Œè¾“å‡ºé”™è¯¯ä¿¡æ¯ï¼Œå…³é—­æœåŠ¡æ§åˆ¶ç®¡ç†å™¨å¥æŸ„å¹¶è¿”å› false
         std::cerr << "OpenService failed for service: " << WideToMultiByte(serviceName) << std::endl;
         CloseServiceHandle(schSCManager);
         return false;
     }
 
-    // ¶¨ÒåÒ»¸ö SERVICE_STATUS ½á¹¹ÌåÀ´´æ´¢·şÎñ×´Ì¬ĞÅÏ¢
+    // å®šä¹‰ä¸€ä¸ª SERVICE_STATUS ç»“æ„ä½“æ¥å­˜å‚¨æœåŠ¡çŠ¶æ€ä¿¡æ¯
     SERVICE_STATUS serviceStatus = { 0 };
-    // µ÷ÓÃ ControlService º¯Êı³¢ÊÔÍ£Ö¹·şÎñ
+    // è°ƒç”¨ ControlService å‡½æ•°å°è¯•åœæ­¢æœåŠ¡
     BOOL result = ControlService(schService, SERVICE_CONTROL_STOP, &serviceStatus);
     if (!result && GetLastError() == ERROR_SERVICE_NOT_ACTIVE) {
-        // Èô·şÎñÒÑ¾­Í£Ö¹£¬Êä³öÌáÊ¾ĞÅÏ¢²¢½« result ÉèÎª TRUE
+        // è‹¥æœåŠ¡å·²ç»åœæ­¢ï¼Œè¾“å‡ºæç¤ºä¿¡æ¯å¹¶å°† result è®¾ä¸º TRUE
         std::wcout << L"Service " << serviceName << L" is already stopped." << std::endl;
         result = TRUE;
     }
 
-    // ¹Ø±Õ·şÎñ¾ä±ú
+    // å…³é—­æœåŠ¡å¥æŸ„
     CloseServiceHandle(schService);
-    // ¹Ø±Õ·şÎñ¿ØÖÆ¹ÜÀíÆ÷¾ä±ú
+    // å…³é—­æœåŠ¡æ§åˆ¶ç®¡ç†å™¨å¥æŸ„
     CloseServiceHandle(schSCManager);
-    // ·µ»ØÍ£Ö¹·şÎñ²Ù×÷µÄ½á¹û
+    // è¿”å›åœæ­¢æœåŠ¡æ“ä½œçš„ç»“æœ
     return result != 0;
 }
 
 
 
-// ÖØÆô·şÎñ
+// é‡å¯æœåŠ¡
 bool DataManager::RestartService(const std::wstring& serviceName) {
     if (!StopService(serviceName)) {
         return false;
     }
 
-    // µÈ´ı·şÎñÍ£Ö¹
+    // ç­‰å¾…æœåŠ¡åœæ­¢
     Sleep(1000);
 
     return StartTargetService(serviceName);
 }
 
 
-//// µ¼³ö½ø³ÌĞÅÏ¢µ½ CSV
+//// å¯¼å‡ºè¿›ç¨‹ä¿¡æ¯åˆ° CSV
 //bool DataManager::ExportProcessesToCSV(const std::wstring& filePath) const {
 //    std::lock_guard<std::mutex> lock(m_dataMutex);
 //
@@ -281,13 +352,13 @@ bool DataManager::RestartService(const std::wstring& serviceName) {
 //        return false;
 //    }
 //
-//    // ÉèÖÃ UTF-8 ±àÂë
+//    // è®¾ç½® UTF-8 ç¼–ç 
 //    file.imbue(std::locale(file.getloc(), new std::codecvt_utf8<wchar_t>()));
 //
-//    // Ğ´Èë±íÍ·
-//    file << L"PID,¸¸ PID,½ø³ÌÃû,¿ÉÖ´ĞĞÎÄ¼şÂ·¾¶,ÃüÁîĞĞ,´´½¨Ê±¼ä,ÄÚ´æÕ¼ÓÃ,CPU Ê±¼ä" << std::endl;
+//    // å†™å…¥è¡¨å¤´
+//    file << L"PID,çˆ¶ PID,è¿›ç¨‹å,å¯æ‰§è¡Œæ–‡ä»¶è·¯å¾„,å‘½ä»¤è¡Œ,åˆ›å»ºæ—¶é—´,å†…å­˜å ç”¨,CPU æ—¶é—´" << std::endl;
 //
-//    // Ğ´ÈëÊı¾İ
+//    // å†™å…¥æ•°æ®
 //    for (const auto& process : m_processes) {
 //        file << process.pid << L","
 //            << process.parentPid << L","
@@ -304,7 +375,7 @@ bool DataManager::RestartService(const std::wstring& serviceName) {
 //}
 //
 //
-//// µ¼³ö·şÎñĞÅÏ¢µ½CSV
+//// å¯¼å‡ºæœåŠ¡ä¿¡æ¯åˆ°CSV
 //bool DataManager::ExportServicesToCSV(const std::wstring& filePath) const {
 //    std::lock_guard<std::mutex> lock(m_dataMutex);
 //
@@ -314,13 +385,13 @@ bool DataManager::RestartService(const std::wstring& serviceName) {
 //        return false;
 //    }
 //
-//    // ÉèÖÃUTF-8±àÂë
+//    // è®¾ç½®UTF-8ç¼–ç 
 //    file.imbue(std::locale(file.getloc(), new std::codecvt_utf8<wchar_t>()));
 //
-//    // Ğ´Èë±íÍ·
-//    file << L"·şÎñÃû,ÏÔÊ¾Ãû³Æ,×´Ì¬,Æô¶¯ÀàĞÍ,¿ÉÖ´ĞĞÎÄ¼şÂ·¾¶" << std::endl;
+//    // å†™å…¥è¡¨å¤´
+//    file << L"æœåŠ¡å,æ˜¾ç¤ºåç§°,çŠ¶æ€,å¯åŠ¨ç±»å‹,å¯æ‰§è¡Œæ–‡ä»¶è·¯å¾„" << std::endl;
 //
-//    // Ğ´ÈëÊı¾İ
+//    // å†™å…¥æ•°æ®
 //    for (const auto& service : m_services) {
 //        file << service.serviceName << L","
 //            << service.displayName << L","
@@ -333,12 +404,12 @@ bool DataManager::RestartService(const std::wstring& serviceName) {
 //    return true;
 //}
 
-// ÉèÖÃË¢ĞÂ¼ä¸ô
+// è®¾ç½®åˆ·æ–°é—´éš”
 void DataManager::SetRefreshInterval(int seconds) {
     m_refreshInterval = seconds;
 }
 
-// ¿ªÊ¼×Ô¶¯Ë¢ĞÂ
+// å¼€å§‹è‡ªåŠ¨åˆ·æ–°
 void DataManager::StartAutoRefresh() {
     if (m_autoRefreshRunning) {
         return;
@@ -348,7 +419,7 @@ void DataManager::StartAutoRefresh() {
     m_refreshThread = new std::thread(&DataManager::RefreshThreadFunction, this);
 }
 
-// Í£Ö¹×Ô¶¯Ë¢ĞÂ
+// åœæ­¢è‡ªåŠ¨åˆ·æ–°
 void DataManager::StopAutoRefresh() {
     if (!m_autoRefreshRunning) {
         return;
@@ -362,7 +433,7 @@ void DataManager::StopAutoRefresh() {
     }
 }
 
-// ÊÖ¶¯Ë¢ĞÂ
+// æ‰‹åŠ¨åˆ·æ–°
 void DataManager::ManualRefresh() {
     CollectProcesses();
     CollectServices();
@@ -371,7 +442,7 @@ void DataManager::ManualRefresh() {
     CollectSystemInfo();
 }
 
-// ¹ıÂË½ø³ÌĞÅÏ¢
+// è¿‡æ»¤è¿›ç¨‹ä¿¡æ¯
 std::vector<ProcessInfo> DataManager::FilterProcesses(const std::wstring& searchText) const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
@@ -399,7 +470,7 @@ std::vector<ProcessInfo> DataManager::FilterProcesses(const std::wstring& search
     return result;
 }
 
-// ¹ıÂË·şÎñĞÅÏ¢
+// è¿‡æ»¤æœåŠ¡ä¿¡æ¯
 std::vector<ServiceInfo> DataManager::FilterServices(const std::wstring& searchText) const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
@@ -432,7 +503,7 @@ std::vector<ServiceInfo> DataManager::FilterServices(const std::wstring& searchT
     return result;
 }
 
-// Êä³ö½ø³ÌĞÅÏ¢
+// è¾“å‡ºè¿›ç¨‹ä¿¡æ¯
 void DataManager::OutputProcesses(const std::vector<ProcessInfo>& processes) const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
@@ -457,7 +528,7 @@ void DataManager::OutputProcesses(const std::vector<ProcessInfo>& processes) con
     }
 }
 
-// Êä³ö·şÎñĞÅÏ¢
+// è¾“å‡ºæœåŠ¡ä¿¡æ¯
 void DataManager::OutputServices(const std::vector<ServiceInfo>& services) const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
@@ -480,16 +551,16 @@ void DataManager::OutputServices(const std::vector<ServiceInfo>& services) const
     }
 }
 
-// Êä³öÍøÂçÁ¬½ÓĞÅÏ¢
+// è¾“å‡ºç½‘ç»œè¿æ¥ä¿¡æ¯
 void DataManager::OutputConnections(const std::vector<ConnectionInfo>& connections) const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
     const auto& connectionList = connections.empty() ? m_connections : connections;
-    std::wcout << std::left << std::setw(8) << L"Protocol"  // Ğ­Òé ¡ú Protocol
-        << std::setw(25) << L"Local Address"             // ±¾µØµØÖ· ¡ú Local Address
-        << std::setw(25) << L"Remote Address"            // Ô¶³ÌµØÖ· ¡ú Remote Address
-        << std::setw(15) << L"State"                     // ×´Ì¬ ¡ú State
-        << std::setw(8) << L"PID"                        // PID±£³Ö²»±ä
+    std::wcout << std::left << std::setw(8) << L"Protocol"  // åè®® â†’ Protocol
+        << std::setw(25) << L"Local Address"             // æœ¬åœ°åœ°å€ â†’ Local Address
+        << std::setw(25) << L"Remote Address"            // è¿œç¨‹åœ°å€ â†’ Remote Address
+        << std::setw(15) << L"State"                     // çŠ¶æ€ â†’ State
+        << std::setw(8) << L"PID"                        // PIDä¿æŒä¸å˜
         << std::endl;
 
     std::wcout << std::wstring(81, L'-') << std::endl;
@@ -504,7 +575,7 @@ void DataManager::OutputConnections(const std::vector<ConnectionInfo>& connectio
     }
 }
 
-// Êä³ö»á»°ĞÅÏ¢
+// è¾“å‡ºä¼šè¯ä¿¡æ¯
 void DataManager::OutputSessions(const std::vector<SessionInfo>& sessions) const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
@@ -529,12 +600,12 @@ void DataManager::OutputSessions(const std::vector<SessionInfo>& sessions) const
     }
 }
 
-// Êä³öÏµÍ³ĞÅÏ¢
+// è¾“å‡ºç³»ç»Ÿä¿¡æ¯
 void DataManager::OutputSystemInfo() const {
     std::lock_guard<std::mutex> lock(m_dataMutex);
 
     if (!m_systemInfo) {
-        std::wcout << L"ÏµÍ³ĞÅÏ¢Î´ÊÕ¼¯" << std::endl;
+        std::wcout << L"ç³»ç»Ÿä¿¡æ¯æœªæ”¶é›†" << std::endl;
         return;
     }
 
@@ -549,7 +620,7 @@ void DataManager::OutputSystemInfo() const {
     std::wcout << L"CPU: " << info.cpuInfo << L" (" << info.cpuCores << L" cores)" << std::endl;
 }
 
-// Ë¢ĞÂÏß³Ìº¯Êı
+// åˆ·æ–°çº¿ç¨‹å‡½æ•°
 void DataManager::RefreshThreadFunction() {
     while (m_autoRefreshRunning) {
         ManualRefresh();

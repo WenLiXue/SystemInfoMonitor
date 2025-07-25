@@ -1,4 +1,4 @@
-// ServiceCollector.cpp
+ï»¿// ServiceCollector.cpp
 #include "ServiceCollector.h"
 #include <iostream>
 #include <string>
@@ -7,6 +7,20 @@ ServiceCollector::ServiceCollector() : m_scmHandle(NULL) {}
 
 ServiceCollector::~ServiceCollector() {
     Cleanup();
+}
+
+// å¯åŠ¨ç±»å‹è½¬æ¢ä¸ºå­—ç¬¦ä¸²
+std::wstring ServiceCollector::StartTypeToString(DWORD startType) {
+    switch (startType) {
+    case SERVICE_AUTO_START:          return L"è‡ªåŠ¨";
+    case SERVICE_AUTO_START_DELAYED:  return L"è‡ªåŠ¨(å»¶è¿Ÿ)";
+    case SERVICE_DEMAND_START:        return L"æ‰‹åŠ¨";
+    case SERVICE_DISABLED:            return L"ç¦ç”¨";
+    case SERVICE_BOOT_START:          return L"ç³»ç»Ÿå¼•å¯¼";
+    case SERVICE_SYSTEM_START:        return L"ç³»ç»Ÿå¯åŠ¨";
+    case SERVICE_TYPE_UNKNOWN:        return L"æœªçŸ¥"; // æ–°å¢å¤„ç†è‡ªå®šä¹‰æœªçŸ¥ç±»å‹
+    default: return L"æœªçŸ¥";
+    }
 }
 
 bool ServiceCollector::Initialize() {
@@ -28,12 +42,12 @@ bool ServiceCollector::CollectServices(std::vector<ServiceInfo>& services) {
 
     services.clear();
 
-    // »ñÈ¡·şÎñÊıÁ¿ºÍ´óĞ¡
+    // è·å–æœåŠ¡æ•°é‡å’Œå¤§å°
     DWORD bytesNeeded = 0;
     DWORD servicesReturned = 0;
     DWORD resumeHandle = 0;
 
-    EnumServicesStatusExW(
+    if (!EnumServicesStatusExW(
         m_scmHandle,
         SC_ENUM_PROCESS_INFO,
         SERVICE_WIN32 | SERVICE_DRIVER,
@@ -44,22 +58,20 @@ bool ServiceCollector::CollectServices(std::vector<ServiceInfo>& services) {
         &servicesReturned,
         &resumeHandle,
         NULL
-    );
-
-    if (GetLastError() != ERROR_MORE_DATA) {
-        return false;
+    )) {
+        if (GetLastError() != ERROR_MORE_DATA) {
+            return false;
+        }
     }
 
-    // ·ÖÅäÄÚ´æ
+    // åˆ†é…å†…å­˜å¹¶å†æ¬¡è°ƒç”¨è·å–æœåŠ¡ä¿¡æ¯
     std::vector<unsigned char> buffer(bytesNeeded);
-
-    // ÔÙ´Îµ÷ÓÃ»ñÈ¡·şÎñĞÅÏ¢
     if (!EnumServicesStatusExW(
         m_scmHandle,
         SC_ENUM_PROCESS_INFO,
         SERVICE_WIN32 | SERVICE_DRIVER,
         SERVICE_STATE_ALL,
-        reinterpret_cast<LPBYTE>(buffer.data()),  // ÏÔÊ½ÀàĞÍ×ª»»
+        buffer.data(),
         bytesNeeded,
         &bytesNeeded,
         &servicesReturned,
@@ -69,9 +81,9 @@ bool ServiceCollector::CollectServices(std::vector<ServiceInfo>& services) {
         return false;
     }
 
-    // ´¦ÀíÃ¿¸ö·şÎñ
+    // å¤„ç†æ¯ä¸ªæœåŠ¡
     ENUM_SERVICE_STATUS_PROCESSW* servicesBuffer =
-        reinterpret_cast<ENUM_SERVICE_STATUS_PROCESSW*>(buffer.data());  // ÏÔÊ½ÀàĞÍ×ª»»
+        reinterpret_cast<ENUM_SERVICE_STATUS_PROCESSW*>(buffer.data());
 
     for (DWORD i = 0; i < servicesReturned; ++i) {
         ServiceInfo service;
@@ -79,7 +91,7 @@ bool ServiceCollector::CollectServices(std::vector<ServiceInfo>& services) {
         service.displayName = servicesBuffer[i].lpDisplayName;
         service.status = servicesBuffer[i].ServiceStatusProcess.dwCurrentState;
 
-        // »ñÈ¡·şÎñÆô¶¯ÀàĞÍºÍ¶ş½øÖÆÂ·¾¶
+        // è·å–æœåŠ¡å¯åŠ¨ç±»å‹å’ŒäºŒè¿›åˆ¶è·¯å¾„
         SC_HANDLE serviceHandle = OpenServiceW(
             m_scmHandle,
             servicesBuffer[i].lpServiceName,
@@ -87,20 +99,34 @@ bool ServiceCollector::CollectServices(std::vector<ServiceInfo>& services) {
         );
 
         if (serviceHandle) {
-            // »ñÈ¡·şÎñÅäÖÃĞÅÏ¢
+            // è·å–æœåŠ¡é…ç½®ä¿¡æ¯
             DWORD configBytesNeeded = 0;
             QueryServiceConfigW(serviceHandle, NULL, 0, &configBytesNeeded);
 
             std::vector<unsigned char> configBuffer(configBytesNeeded);
             LPQUERY_SERVICE_CONFIGW config =
-                reinterpret_cast<LPQUERY_SERVICE_CONFIGW>(configBuffer.data());  // ÏÔÊ½ÀàĞÍ×ª»»
+                reinterpret_cast<LPQUERY_SERVICE_CONFIGW>(configBuffer.data());
 
             if (QueryServiceConfigW(serviceHandle, config, configBytesNeeded, &configBytesNeeded)) {
                 service.startType = config->dwStartType;
                 service.binaryPath = config->lpBinaryPathName;
+
+                // æ–°å¢ï¼šè®¾ç½®å¯åŠ¨ç±»å‹å­—ç¬¦ä¸²
+                service.startTypeStr = StartTypeToString(config->dwStartType);
+            }
+            else {
+                // å¦‚æœè·å–é…ç½®å¤±è´¥ï¼Œè®¾ç½®ä¸ºæœªçŸ¥ç±»å‹
+                service.startType = SERVICE_TYPE_UNKNOWN;
+                service.startTypeStr = L"æœªçŸ¥";
             }
 
             CloseServiceHandle(serviceHandle);
+        }
+        else {
+            // å¦‚æœæ— æ³•è·å–æœåŠ¡å¥æŸ„ï¼Œè®¾ç½®é»˜è®¤å€¼
+            service.startType = SERVICE_TYPE_UNKNOWN;
+            service.startTypeStr = L"æœªçŸ¥";
+            service.binaryPath = L"";
         }
 
         services.push_back(service);
@@ -155,7 +181,7 @@ bool ServiceCollector::RestartService(const std::wstring& serviceName) {
         return false;
     }
 
-    // µÈ´ı·şÎñÍ£Ö¹
+    // ç­‰å¾…æœåŠ¡åœæ­¢
     Sleep(1000);
 
     return StartService(serviceName);

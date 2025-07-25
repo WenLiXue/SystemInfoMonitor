@@ -1,4 +1,4 @@
-// DataManager.h
+ï»¿// DataManager.h
 #pragma once
 #include <vector>
 #include <thread>
@@ -17,7 +17,7 @@
 #include"NetworkCollector.h"
 #include"SessionCollector.h"
 #include"SystemInfoCollector.h"
-// Ç°ÖÃÉùÃ÷
+// å‰ç½®å£°æ˜
 struct ProcessInfo;
 struct ServiceInfo;
 struct ConnectionInfo;
@@ -31,56 +31,57 @@ class SessionCollector;
 class SystemInfoCollector;
 std::string WideToMultiByte(const std::wstring& wstr);
 
-// Êı¾İ¹ÜÀíÀà - ¸ºÔğÊı¾İÊÕ¼¯¡¢´æ´¢ºÍ¹ÜÀíÏµÍ³Ïà¹ØĞÅÏ¢
+// æ•°æ®ç®¡ç†ç±» - è´Ÿè´£æ•°æ®æ”¶é›†ã€å­˜å‚¨å’Œç®¡ç†ç³»ç»Ÿç›¸å…³ä¿¡æ¯
 class DataManager {
 public:
     static bool InitGlobalInstance();
-    // µ¥ÀıÄ£Ê½ÊµÏÖ
+    // å•ä¾‹æ¨¡å¼å®ç°
     static DataManager& GetInstance();
 
-    // ³õÊ¼»¯ËùÓĞÊÕ¼¯Æ÷
+    // åˆå§‹åŒ–æ‰€æœ‰æ”¶é›†å™¨
     bool Initialize();
-    // ÇåÀí×ÊÔ´
+    // æ¸…ç†èµ„æº
     void Cleanup();
 
-    // Êı¾İÊÕ¼¯·½·¨
+    // æ•°æ®æ”¶é›†æ–¹æ³•
     bool CollectProcesses();
     bool CollectServices();
     bool CollectConnections();
     bool CollectSessions();
     bool CollectSystemInfo();
 
-    // Êı¾İ»ñÈ¡·½·¨
+    // æ•°æ®è·å–æ–¹æ³•
     const std::vector<ProcessInfo>& GetProcesses() const;
     const std::vector<ServiceInfo>& GetServices() const;
     const std::vector<ConnectionInfo>& GetConnections() const;
     const std::vector<SessionInfo>& GetSessions() const;
     const SystemInfo& GetSystemInfo() const;
+	const double GetCpuUsage() const;
 
-    // ½ø³Ì²Ù×÷
+    // è¿›ç¨‹æ“ä½œ
     bool TerminateTargetProcessByPid(DWORD pid);
     bool TerminateTargetProcessByName(const std::string& processName);
 
-    // ·şÎñ²Ù×÷
+    // æœåŠ¡æ“ä½œ
     bool StartTargetService(const std::wstring& serviceName);
     bool StopService(const std::wstring& serviceName);
     bool RestartService(const std::wstring& serviceName);
 
-    // Êı¾İµ¼³ö
+    // æ•°æ®å¯¼å‡º
     //bool ExportProcessesToCSV(const std::wstring& filePath) const;
     //bool ExportServicesToCSV(const std::wstring& filePath) const;
 
-    // Ë¢ĞÂÉèÖÃ
+    // åˆ·æ–°è®¾ç½®
     void SetRefreshInterval(int seconds);
     void StartAutoRefresh();
     void StopAutoRefresh();
     void ManualRefresh();
 
-    // Êı¾İ¹ıÂË
+    // æ•°æ®è¿‡æ»¤
     std::vector<ProcessInfo> FilterProcesses(const std::wstring& searchText) const;
     std::vector<ServiceInfo> FilterServices(const std::wstring& searchText) const;
 
-    // Êı¾İÕ¹Ê¾
+    // æ•°æ®å±•ç¤º
     void OutputProcesses(const std::vector<ProcessInfo>& processes = {}) const;
     void OutputServices(const std::vector<ServiceInfo>& services = {}) const;
     void OutputConnections(const std::vector<ConnectionInfo>& connections = {}) const;
@@ -88,34 +89,38 @@ public:
     void OutputSystemInfo() const;
 
 private:
-    // Ë½ÓĞ¹¹Ôìº¯Êı£¬·ÀÖ¹Íâ²¿ÊµÀı»¯
+    // ç§æœ‰æ„é€ å‡½æ•°ï¼Œé˜²æ­¢å¤–éƒ¨å®ä¾‹åŒ–
     DataManager();
     ~DataManager();
 
-    // ½ûÖ¹¿½±´ºÍ¸³Öµ
+    // ç¦æ­¢æ‹·è´å’Œèµ‹å€¼
     DataManager(const DataManager&) = delete;
     DataManager& operator=(const DataManager&) = delete;
 
-    // Êı¾İ´æ´¢
+    // æ•°æ®å­˜å‚¨
     std::vector<ProcessInfo> m_processes;
     std::vector<ServiceInfo> m_services;
     std::vector<ConnectionInfo> m_connections;
     std::vector<SessionInfo> m_sessions;
     std::unique_ptr<SystemInfo> m_systemInfo;
 
-    // ÊÕ¼¯Æ÷
+    // æ”¶é›†å™¨
     std::unique_ptr<ProcessCollector> m_processCollector;
     std::unique_ptr<ServiceCollector> m_serviceCollector;
     std::unique_ptr<NetworkCollector> m_networkCollector;
     std::unique_ptr<SessionCollector> m_sessionCollector;
     std::unique_ptr<SystemInfoCollector> m_systemInfoCollector;
 
-    // Ë¢ĞÂÉèÖÃ
+    // åˆ·æ–°è®¾ç½®
     int m_refreshInterval;
     bool m_autoRefreshRunning;
     std::thread* m_refreshThread;
     mutable std::mutex m_dataMutex;
 
-    // Ë¢ĞÂÏß³Ìº¯Êı
+    // æ˜¯å¦åˆå§‹åŒ–
+    bool m_initialized;
+    std::mutex m_initMutex;  // æ·»åŠ åˆå§‹åŒ–äº’æ–¥é”
+
+    // åˆ·æ–°çº¿ç¨‹å‡½æ•°
     void RefreshThreadFunction();
 };

@@ -1,10 +1,12 @@
-// processwidget.h
+ï»¿// processwidget.h
 #ifndef PROCESSWIDGET_H
 #define PROCESSWIDGET_H
 
 #include <QWidget>
 #include<QMessageBox>
-#include "datamanager.h"  // °üº¬DataManagerÍ·ÎÄ¼ş
+#include<QHBoxLayout>
+#include<QVBoxLayout>
+#include "datamanager.h"  // åŒ…å«DataManagerå¤´æ–‡ä»¶
 
 namespace Ui {
     class ProcessWidget;
@@ -14,20 +16,20 @@ class ProcessWidget : public QWidget {
     Q_OBJECT
 
 public:
-    explicit ProcessWidget(QWidget* parent = nullptr);  // ÒÆ³ıDataManager²ÎÊı
+    explicit ProcessWidget(QWidget* parent = nullptr);  // ç§»é™¤DataManagerå‚æ•°
     ~ProcessWidget();
 
-    // Ë¢ĞÂ±í¸ñÊı¾İ
+    // åˆ·æ–°è¡¨æ ¼æ•°æ®
     void refreshTable();
 
 private slots:
-    void on_refreshButton_clicked();  // Ë¢ĞÂ°´Å¥µã»÷ÊÂ¼ş
+    void on_refreshButton_clicked();  // åˆ·æ–°æŒ‰é’®ç‚¹å‡»äº‹ä»¶
 
     void on_btnTerminateProcess_clicked();
 
 private:
     Ui::ProcessWidget* ui;
-    // ²»ĞèÒª±£´æDataManagerÖ¸Õë£¬Ö±½ÓÍ¨¹ıµ¥Àı·ÃÎÊ
+    // ä¸éœ€è¦ä¿å­˜DataManageræŒ‡é’ˆï¼Œç›´æ¥é€šè¿‡å•ä¾‹è®¿é—®
 };
 
 #endif // PROCESSWIDGET_H

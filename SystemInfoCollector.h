@@ -1,4 +1,4 @@
-// SystemInfoCollector.h
+﻿// SystemInfoCollector.h
 #ifndef SYSTEMINFOCOLLECTOR_H
 #define SYSTEMINFOCOLLECTOR_H
 
@@ -15,6 +15,10 @@ struct SystemInfo {
     ULONGLONG availablePhysicalMemory;
     std::wstring cpuInfo;
     DWORD cpuCores;
+
+    FILETIME idleTime;      // 空闲 CPU 时间
+    FILETIME kernelTime;    // 内核模式 CPU 时间
+    FILETIME userTime;      // 用户模式 CPU 时间
 };
 
 class SystemInfoCollector {

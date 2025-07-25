@@ -52,7 +52,14 @@
     <ClCompile Include="processwidget.cpp">
       <Filter>gui</Filter>
     </ClCompile>
-    <ClCompile Include="systeminfowidget.cpp" />
+    <ClCompile Include="systeminfowidget.cpp">
+      <Filter>gui</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkConnectionWidget.cpp">
+      <Filter>gui</Filter>
+    </ClCompile>
+    <ClCompile Include="servicewidget.cpp" />
+    <ClCompile Include="sessionwidget.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="systeminfomonitor.h">
@@ -61,7 +68,14 @@
     <QtMoc Include="processwidget.h">
       <Filter>gui</Filter>
     </QtMoc>
-    <QtMoc Include="systeminfowidget.h" />
+    <QtMoc Include="systeminfowidget.h">
+      <Filter>gui</Filter>
+    </QtMoc>
+    <QtMoc Include="NetworkConnectionWidget.h">
+      <Filter>gui</Filter>
+    </QtMoc>
+    <QtMoc Include="servicewidget.h" />
+    <QtMoc Include="sessionwidget.h" />
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="systeminfomonitor.qrc">
@@ -76,6 +90,9 @@
       <Filter>gui</Filter>
     </QtUic>
     <QtUic Include="systeminfowidget.ui">
+      <Filter>gui</Filter>
+    </QtUic>
+    <QtUic Include="networkconnectionwidget.ui">
       <Filter>gui</Filter>
     </QtUic>
   </ItemGroup>

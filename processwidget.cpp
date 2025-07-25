@@ -1,4 +1,4 @@
-// processwidget.cpp
+﻿// processwidget.cpp
 #include "processwidget.h"
 #include "ui_processwidget.h"
 #include <QHeaderView>
@@ -14,39 +14,56 @@ double FileTimeToSeconds(const FILETIME& ft) {
     return static_cast<double>(ull.QuadPart) / 10000000.0;
 }
 
+ProcessWidget::~ProcessWidget() {
+    delete ui;
+}
 ProcessWidget::ProcessWidget(QWidget* parent) :
     QWidget(parent),
     ui(new Ui::ProcessWidget)
 {
     ui->setupUi(this);
 
+    // ===== 关键：添加顶层布局 =====
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 0, 0, 0); // 去除边缘间距，避免留白
+    mainLayout->setSpacing(0); // 控件间无间距
+
     // 1. 初始化表格模型
     QStandardItemModel* model = new QStandardItemModel(0, 9, this);
-    //model->setHorizontalHeaderLabels({
-    //    "PID", "PPID", "进程名", "可执行路径", "命令行",
-    //    "创建时间", "内存(KB)", "内核时间(s)", "用户时间(s)"
-    //    });
     model->setHorizontalHeaderLabels({
-        "PID", "PPID", "Process Name", "Executable Path", "Command Line",
-        "Creation Time", "Memory (KB)", "Kernel Time (s)", "User Time (s)"
-		});
+        "PID", "PPID", "进程名", "可执行路径", "命令行",
+        "创建时间", "内存(KB)", "内核时间(s)", "用户时间(s)"
+        });
+
     // 2. 配置表格视图
     ui->tableView->setModel(model);
     ui->tableView->setSortingEnabled(true);
     ui->tableView->setAlternatingRowColors(true);
     ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     ui->tableView->horizontalHeader()->setStretchLastSection(true);
+    // 设置表格大小策略为“扩展”，确保填满布局空间
+    ui->tableView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-    // 3. 连接刷新按钮事件
+    // 3. 处理“终止进程”相关控件（假设ui中包含按钮和输入框）
+    // 创建一个水平布局存放“刷新按钮”“终止按钮”和输入框
+    QHBoxLayout* controlLayout = new QHBoxLayout();
+    controlLayout->addWidget(ui->btnFresh); // 刷新按钮
+    controlLayout->addWidget(ui->processInfo); // 进程输入框（QLineEdit）
+    controlLayout->addWidget(ui->btnTerminateProcess); // 终止按钮
+
+    // 4. 将所有控件添加到顶层布局
+    mainLayout->addLayout(controlLayout); // 添加控制栏（按钮+输入框）
+    mainLayout->addWidget(ui->tableView); // 添加表格
+    mainLayout->addWidget(ui->bottomState); // 添加状态栏（假设是QLabel）
+
+    // 5. 连接刷新按钮事件
     connect(ui->btnFresh, &QPushButton::clicked, this, &ProcessWidget::on_refreshButton_clicked);
 
     // 初始加载数据
     refreshTable();
 }
 
-ProcessWidget::~ProcessWidget() {
-    delete ui;
-}
+
 
 // 刷新表格数据（从DataManager单例获取数据）
 void ProcessWidget::refreshTable() {
@@ -59,7 +76,7 @@ void ProcessWidget::refreshTable() {
     // 通过单例获取进程数据
     const std::vector<ProcessInfo>& processes = DataManager::GetInstance().GetProcesses();
     if (processes.empty()) {
-        ui->bottomState->setText("No process data");
+        ui->bottomState->setText("无进程数据");
         return;
     }
 
@@ -83,7 +100,7 @@ void ProcessWidget::refreshTable() {
     }
 
     // 更新状态栏
-    ui->bottomState->setText(QString("Total %1 processes, last updated at %2")
+    ui->bottomState->setText(QString("共 %1 个进程，最后更新于 %2")
         .arg(processes.size())
         .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss")));
 }
@@ -151,7 +168,6 @@ void ProcessWidget::on_btnTerminateProcess_clicked()
 
 // 刷新按钮点击事件处理
 void ProcessWidget::on_refreshButton_clicked() {
-	DataManager::InitGlobalInstance();  // 确保DataManager单例已初始化
     // 可以先调用数据更新逻辑（如果需要）
     DataManager::GetInstance().ManualRefresh();  // 假设有刷新数据的方法
     refreshTable();

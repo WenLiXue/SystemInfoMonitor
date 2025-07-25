@@ -1,9 +1,9 @@
-#include "systeminfowidget.h"
+ï»¿#include "systeminfowidget.h"
 #include "ui_systeminfowidget.h"
 #include <QDateTime>
 #include <sstream>
 
-// ¸¨Öúº¯Êı£º½«×Ö½Ú×ª»»ÎªGB£¨±£Áô2Î»Ğ¡Êı£©
+// è¾…åŠ©å‡½æ•°ï¼šå­—èŠ‚è½¬GB
 QString bytesToGB(ULONGLONG bytes) {
     double gb = static_cast<double>(bytes) / (1024 * 1024 * 1024);
     return QString::number(gb, 'f', 2) + " GB";
@@ -12,58 +12,73 @@ QString bytesToGB(ULONGLONG bytes) {
 SystemInfoWidget::SystemInfoWidget(QWidget* parent) :
     QWidget(parent),
     ui(new Ui::SystemInfoWidget),
-    m_dataManager(DataManager::GetInstance()) // »ñÈ¡DataManagerµ¥Àı
+    m_dataManager(DataManager::GetInstance()),
+    m_firstLoad(true)
 {
     ui->setupUi(this);
-    SystemInfoWidget::initUI();       // ³õÊ¼»¯UI×é¼ş
-    refreshSystemInfo(); // ³õÊ¼¼ÓÔØÊı¾İ
+    initUI();
+	
+    // åˆå§‹åŒ–è‡ªåŠ¨åˆ·æ–°å®šæ—¶å™¨ï¼ˆ1ç§’ä¸€æ¬¡ï¼‰
+    m_autoRefreshTimer = new QTimer(this);
+    m_autoRefreshTimer->setInterval(1000); // 1000ms = 1ç§’
+    connect(m_autoRefreshTimer, &QTimer::timeout, this, &SystemInfoWidget::onAutoRefresh);
 
-    // °ó¶¨Ë¢ĞÂ°´Å¥ÊÂ¼ş
+    // ç»‘å®šæ‰‹åŠ¨åˆ·æ–°æŒ‰é’®
     connect(m_refreshBtn, &QPushButton::clicked, this, &SystemInfoWidget::onRefreshClicked);
+
+
+}
+// æ–°å¢ï¼šå¯åŠ¨è‡ªåŠ¨åˆ·æ–°ï¼ˆä¾›ä¸»çª—å£è°ƒç”¨ï¼‰
+void SystemInfoWidget::startAutoRefresh() {
+    if (!m_autoRefreshTimer->isActive()) {
+        m_autoRefreshTimer->start();
+    }
 }
 
+// æ–°å¢ï¼šåœæ­¢è‡ªåŠ¨åˆ·æ–°ï¼ˆä¾›ä¸»çª—å£è°ƒç”¨ï¼‰
+void SystemInfoWidget::stopAutoRefresh() {
+    if (m_autoRefreshTimer->isActive()) {
+        m_autoRefreshTimer->stop();
+    }
+}
 SystemInfoWidget::~SystemInfoWidget() {
     delete ui;
 }
 
-// ³õÊ¼»¯UI×é¼ş
+// åˆå§‹åŒ–UIç»„ä»¶ï¼ˆä¿æŒä¸å˜ï¼‰
 void SystemInfoWidget::initUI() {
-    // ===== Ö÷²¼¾Ö =====
+    // ===== ä¸»å¸ƒå±€ =====
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
-    mainLayout->setSpacing(20); // ×é¼ä¼ä¾à
+    mainLayout->setSpacing(20);
 
-    // ===== 1. ²Ù×÷ÏµÍ³ĞÅÏ¢×é =====
-    m_osGroup = new QGroupBox("²Ù×÷ÏµÍ³ĞÅÏ¢", this);
+    // ===== 1. æ“ä½œç³»ç»Ÿä¿¡æ¯ç»„ =====
+    m_osGroup = new QGroupBox("æ“ä½œç³»ç»Ÿä¿¡æ¯", this);
     QVBoxLayout* osLayout = new QVBoxLayout(m_osGroup);
-    osLayout->setSpacing(10); // Ïî¼ä¾à
+    osLayout->setSpacing(10);
 
-    // ²Ù×÷ÏµÍ³°æ±¾
     QHBoxLayout* osVersionLayout = new QHBoxLayout();
-    osVersionLayout->addWidget(new QLabel("²Ù×÷ÏµÍ³°æ±¾£º", this));
-    m_osVersionLabel = new QLabel("-", this); // ³õÊ¼Õ¼Î»·û
+    osVersionLayout->addWidget(new QLabel("æ“ä½œç³»ç»Ÿç‰ˆæœ¬ï¼š", this));
+    m_osVersionLabel = new QLabel("-", this);
     osVersionLayout->addWidget(m_osVersionLabel);
-    osVersionLayout->addStretch(); // ÓÒ¶ÔÆëÀ­Éì
+    osVersionLayout->addStretch();
     osLayout->addLayout(osVersionLayout);
 
-    // Ö÷»úÃû
     QHBoxLayout* hostNameLayout = new QHBoxLayout();
-    hostNameLayout->addWidget(new QLabel("Ö÷»úÃû£º", this));
+    hostNameLayout->addWidget(new QLabel("ä¸»æœºåï¼š", this));
     m_hostNameLabel = new QLabel("-", this);
     hostNameLayout->addWidget(m_hostNameLabel);
     hostNameLayout->addStretch();
     osLayout->addLayout(hostNameLayout);
 
-    // ÓÃ»§Ãû
     QHBoxLayout* userNameLayout = new QHBoxLayout();
-    userNameLayout->addWidget(new QLabel("µ±Ç°ÓÃ»§£º", this));
+    userNameLayout->addWidget(new QLabel("å½“å‰ç”¨æˆ·ï¼š", this));
     m_userNameLabel = new QLabel("-", this);
     userNameLayout->addWidget(m_userNameLabel);
     userNameLayout->addStretch();
     osLayout->addLayout(userNameLayout);
 
-    // ÏµÍ³ÔËĞĞÊ±¼ä
     QHBoxLayout* upTimeLayout = new QHBoxLayout();
-    upTimeLayout->addWidget(new QLabel("ÏµÍ³ÔËĞĞÊ±¼ä£º", this));
+    upTimeLayout->addWidget(new QLabel("ç³»ç»Ÿè¿è¡Œæ—¶é—´ï¼š", this));
     m_systemUpTimeLabel = new QLabel("-", this);
     upTimeLayout->addWidget(m_systemUpTimeLabel);
     upTimeLayout->addStretch();
@@ -72,108 +87,177 @@ void SystemInfoWidget::initUI() {
     m_osGroup->setLayout(osLayout);
     mainLayout->addWidget(m_osGroup);
 
-    // ===== 2. Ó²¼şĞÅÏ¢×é =====
-    m_hardwareGroup = new QGroupBox("Ó²¼şĞÅÏ¢", this);
+    // ===== 2. ç¡¬ä»¶ä¿¡æ¯ç»„ =====
+    m_hardwareGroup = new QGroupBox("ç¡¬ä»¶ä¿¡æ¯", this);
     QVBoxLayout* hardwareLayout = new QVBoxLayout(m_hardwareGroup);
     hardwareLayout->setSpacing(10);
 
-    // CPUĞÅÏ¢
     QHBoxLayout* cpuInfoLayout = new QHBoxLayout();
-    cpuInfoLayout->addWidget(new QLabel("CPUĞÅÏ¢£º", this));
+    cpuInfoLayout->addWidget(new QLabel("CPUä¿¡æ¯ï¼š", this));
     m_cpuInfoLabel = new QLabel("-", this);
     cpuInfoLayout->addWidget(m_cpuInfoLabel);
     cpuInfoLayout->addStretch();
     hardwareLayout->addLayout(cpuInfoLayout);
 
-    // CPUºËĞÄÊı
     QHBoxLayout* cpuCoresLayout = new QHBoxLayout();
-    cpuCoresLayout->addWidget(new QLabel("CPUºËĞÄÊı£º", this));
+    cpuCoresLayout->addWidget(new QLabel("CPUæ ¸å¿ƒæ•°ï¼š", this));
     m_cpuCoresLabel = new QLabel("-", this);
     cpuCoresLayout->addWidget(m_cpuCoresLabel);
     cpuCoresLayout->addStretch();
     hardwareLayout->addLayout(cpuCoresLayout);
 
+    QHBoxLayout* cpuUsageLayout = new QHBoxLayout();
+    cpuUsageLayout->addWidget(new QLabel("CPUä½¿ç”¨ç‡ï¼š", this));
+    m_cpuUsageLabel = new QLabel("-", this);
+    cpuUsageLayout->addWidget(m_cpuUsageLabel);
+    m_cpuUsageBar = new QProgressBar(this);
+    m_cpuUsageBar->setRange(0, 100);
+    m_cpuUsageBar->setTextVisible(false);
+    cpuUsageLayout->addWidget(m_cpuUsageBar);
+    hardwareLayout->addLayout(cpuUsageLayout);
+
     m_hardwareGroup->setLayout(hardwareLayout);
     mainLayout->addWidget(m_hardwareGroup);
 
-    // ===== 3. ÄÚ´æĞÅÏ¢×é =====
-    m_memoryGroup = new QGroupBox("ÄÚ´æĞÅÏ¢", this);
+    // ===== 3. å†…å­˜ä¿¡æ¯ç»„ =====
+    m_memoryGroup = new QGroupBox("å†…å­˜ä¿¡æ¯", this);
     QVBoxLayout* memoryLayout = new QVBoxLayout(m_memoryGroup);
     memoryLayout->setSpacing(10);
 
-    // ×ÜÎïÀíÄÚ´æ
     QHBoxLayout* totalMemLayout = new QHBoxLayout();
-    totalMemLayout->addWidget(new QLabel("×ÜÎïÀíÄÚ´æ£º", this));
+    totalMemLayout->addWidget(new QLabel("æ€»ç‰©ç†å†…å­˜ï¼š", this));
     m_totalMemoryLabel = new QLabel("-", this);
     totalMemLayout->addWidget(m_totalMemoryLabel);
     totalMemLayout->addStretch();
     memoryLayout->addLayout(totalMemLayout);
 
-    // ¿ÉÓÃÎïÀíÄÚ´æ
     QHBoxLayout* availableMemLayout = new QHBoxLayout();
-    availableMemLayout->addWidget(new QLabel("¿ÉÓÃÎïÀíÄÚ´æ£º", this));
+    availableMemLayout->addWidget(new QLabel("å¯ç”¨ç‰©ç†å†…å­˜ï¼š", this));
     m_availableMemoryLabel = new QLabel("-", this);
     availableMemLayout->addWidget(m_availableMemoryLabel);
     availableMemLayout->addStretch();
     memoryLayout->addLayout(availableMemLayout);
 
-    // ÄÚ´æÊ¹ÓÃÂÊ
     QHBoxLayout* usageMemLayout = new QHBoxLayout();
-    usageMemLayout->addWidget(new QLabel("ÄÚ´æÊ¹ÓÃÂÊ£º", this));
+    usageMemLayout->addWidget(new QLabel("å†…å­˜ä½¿ç”¨ç‡ï¼š", this));
     m_memoryUsageLabel = new QLabel("-", this);
     usageMemLayout->addWidget(m_memoryUsageLabel);
-    usageMemLayout->addStretch();
+    m_memoryUsageBar = new QProgressBar(this);
+    m_memoryUsageBar->setRange(0, 100);
+    m_memoryUsageBar->setTextVisible(false);
+    usageMemLayout->addWidget(m_memoryUsageBar);
     memoryLayout->addLayout(usageMemLayout);
 
     m_memoryGroup->setLayout(memoryLayout);
     mainLayout->addWidget(m_memoryGroup);
 
-    // ===== Ë¢ĞÂ°´Å¥ =====
-    m_refreshBtn = new QPushButton("Ë¢ĞÂÏµÍ³ĞÅÏ¢", this);
+    // ===== åˆ·æ–°æŒ‰é’® =====
+    m_refreshBtn = new QPushButton("åˆ·æ–°ç³»ç»Ÿä¿¡æ¯", this);
     mainLayout->addWidget(m_refreshBtn);
 
-    // µ×²¿À­Éì£¨±ÜÃâ¿Ø¼şÕ¼ÂúÕû¸ö´°¿Ú£©
     mainLayout->addStretch();
-
     setLayout(mainLayout);
 }
 
-// Ë¢ĞÂÏµÍ³ĞÅÏ¢
+// åˆ·æ–°ç³»ç»Ÿä¿¡æ¯ï¼ˆæ ¸å¿ƒæ•°æ®æ›´æ–°é€»è¾‘ï¼‰
 void SystemInfoWidget::refreshSystemInfo() {
-    // ´ÓDataManager»ñÈ¡ÏµÍ³ĞÅÏ¢
-    const SystemInfo& sysInfo = DataManager::GetInstance().GetSystemInfo();
+    // å¼ºåˆ¶åˆ·æ–°æ•°æ®ç®¡ç†å™¨ä¸­çš„æœ€æ–°æ•°æ®
+    m_dataManager.ManualRefresh();
+    const SystemInfo& sysInfo = m_dataManager.GetSystemInfo();
 
-    // ===== ¸üĞÂ²Ù×÷ÏµÍ³ĞÅÏ¢ =====
+    // æ›´æ–°æ“ä½œç³»ç»Ÿä¿¡æ¯
     m_osVersionLabel->setText(QString::fromStdWString(sysInfo.osVersion));
     m_hostNameLabel->setText(QString::fromStdWString(sysInfo.hostName));
     m_userNameLabel->setText(QString::fromStdWString(sysInfo.userName));
     m_systemUpTimeLabel->setText(QString::fromStdWString(sysInfo.systemUpTime));
 
-    // ===== ¸üĞÂÓ²¼şĞÅÏ¢ =====
+    // æ›´æ–°CPUä¿¡æ¯
     m_cpuInfoLabel->setText(QString::fromStdWString(sysInfo.cpuInfo));
     m_cpuCoresLabel->setText(QString::number(sysInfo.cpuCores));
 
-    // ===== ¸üĞÂÄÚ´æĞÅÏ¢ =====
-    // ×ÜÄÚ´æ£¨×Ö½Ú¡úGB£©
+    // æ›´æ–°CPUä½¿ç”¨ç‡
+    double cpuUsage = m_dataManager.GetCpuUsage();
+    m_cpuUsageLabel->setText(QString::number(cpuUsage, 'f', 1) + " %");
+    m_cpuUsageBar->setValue(static_cast<int>(cpuUsage));
+    // è®¾ç½®CPUè¿›åº¦æ¡é¢œè‰²
+    if (cpuUsage > 80) {
+        m_cpuUsageBar->setStyleSheet("QProgressBar {border: 1px solid grey; border-radius: 3px;}"
+            "QProgressBar::chunk {background-color: #FF5252;}");
+    }
+    else if (cpuUsage > 50) {
+        m_cpuUsageBar->setStyleSheet("QProgressBar {border: 1px solid grey; border-radius: 3px;}"
+            "QProgressBar::chunk {background-color: #FFC107;}");
+    }
+    else {
+        m_cpuUsageBar->setStyleSheet("QProgressBar {border: 1px solid grey; border-radius: 3px;}"
+            "QProgressBar::chunk {background-color: #4CAF50;}");
+    }
+
+    // æ›´æ–°å†…å­˜ä¿¡æ¯
     m_totalMemoryLabel->setText(bytesToGB(sysInfo.totalPhysicalMemory));
-    // ¿ÉÓÃÄÚ´æ£¨×Ö½Ú¡úGB£©
     m_availableMemoryLabel->setText(bytesToGB(sysInfo.availablePhysicalMemory));
-    // ÄÚ´æÊ¹ÓÃÂÊ£¨¼ÆËã°Ù·Ö±È£©
+    // è®¡ç®—å†…å­˜ä½¿ç”¨ç‡
     if (sysInfo.totalPhysicalMemory > 0) {
         double usedPercent = 100.0 - (
             static_cast<double>(sysInfo.availablePhysicalMemory) / sysInfo.totalPhysicalMemory * 100.0
             );
         m_memoryUsageLabel->setText(QString::number(usedPercent, 'f', 1) + " %");
+        m_memoryUsageBar->setValue(static_cast<int>(usedPercent));
+        // è®¾ç½®å†…å­˜è¿›åº¦æ¡é¢œè‰²
+        if (usedPercent > 80) {
+            m_memoryUsageBar->setStyleSheet("QProgressBar {border: 1px solid grey; border-radius: 3px;}"
+                "QProgressBar::chunk {background-color: #FF5252;}");
+        }
+        else if (usedPercent > 50) {
+            m_memoryUsageBar->setStyleSheet("QProgressBar {border: 1px solid grey; border-radius: 3px;}"
+                "QProgressBar::chunk {background-color: #FFC107;}");
+        }
+        else {
+            m_memoryUsageBar->setStyleSheet("QProgressBar {border: 1px solid grey; border-radius: 3px;}"
+                "QProgressBar::chunk {background-color: #4CAF50;}");
+        }
     }
     else {
-        m_memoryUsageLabel->setText("Î´Öª");
+        m_memoryUsageLabel->setText("æœªçŸ¥");
+        m_memoryUsageBar->setValue(0);
+    }
+
+    m_firstLoad = false; // æ ‡è®°é¦–æ¬¡åŠ è½½å®Œæˆ
+}
+
+// æ‰‹åŠ¨åˆ·æ–°æŒ‰é’®ç‚¹å‡»äº‹ä»¶
+void SystemInfoWidget::onRefreshClicked() {
+    refreshSystemInfo();
+}
+
+// å®šæ—¶å™¨è‡ªåŠ¨åˆ·æ–°äº‹ä»¶ï¼ˆ1ç§’ä¸€æ¬¡ï¼‰
+void SystemInfoWidget::onAutoRefresh() {
+    // ä»…åœ¨å¯è§æ—¶åˆ·æ–°ï¼ŒèŠ‚çœèµ„æº
+    if (isVisible()) {
+        refreshSystemInfo();
     }
 }
 
-// Ë¢ĞÂ°´Å¥µã»÷ÊÂ¼ş
-void SystemInfoWidget::onRefreshClicked() {
-    // ÏÈË¢ĞÂDataManagerµÄÊı¾İ
-    DataManager::GetInstance().ManualRefresh();
-    // ÔÙ¸üĞÂUI
-    refreshSystemInfo();
+// ç›‘å¬è‡ªèº«æ˜¾ç¤ºçŠ¶æ€å˜åŒ–ï¼ˆæ ‡ç­¾é¡µåˆ‡æ¢æ—¶è§¦å‘ï¼‰
+void SystemInfoWidget::onTabVisibleChanged(bool visible) {
+    if (visible) {
+        // å½“æ ‡ç­¾é¡µåˆ‡æ¢åˆ°å½“å‰é¡µæ—¶ï¼Œç«‹å³åˆ·æ–°å¹¶å¯åŠ¨è‡ªåŠ¨åˆ·æ–°
+        refreshSystemInfo();
+        if (!m_autoRefreshTimer->isActive()) {
+            m_autoRefreshTimer->start(); // å¯åŠ¨å®šæ—¶å™¨ï¼ˆ1ç§’ä¸€æ¬¡ï¼‰
+        }
+    }
+    else {
+        // å½“æ ‡ç­¾é¡µåˆ‡æ¢èµ°æ—¶ï¼Œæš‚åœè‡ªåŠ¨åˆ·æ–°
+        if (m_autoRefreshTimer->isActive()) {
+            m_autoRefreshTimer->stop();
+        }
+    }
+}
+
+// å¤–éƒ¨è°ƒç”¨ï¼šè®¾ç½®ä¸ºå½“å‰æ ‡ç­¾é¡µï¼ˆä¸ä¸»çª—å£é…åˆï¼‰
+void SystemInfoWidget::setAsCurrentTab() {
+    // å¼ºåˆ¶åˆ·æ–°å¹¶æ¿€æ´»è‡ªåŠ¨åˆ·æ–°
+    refreshSystemInfo(); // åˆ‡æ¢åˆ°å½“å‰é¡µæ—¶ç«‹å³åˆ·æ–°
+    startAutoRefresh();  // å¯åŠ¨è‡ªåŠ¨åˆ·æ–°
 }
